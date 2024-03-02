@@ -1,86 +1,54 @@
 //! A simple script to generate and verify the proof of a given program.
 
-use alloy_providers::provider::HttpProvider;
-use alloy_providers::provider::TempProvider;
-use alloy_rpc_types::Header as AlloyHeader;
-use alloy_transport_http::Http;
-use reth_primitives::{Header as RethHeader, TxType, U64};
-use reth_primitives::{Log, Receipt};
+mod util;
+use reth_primitives::{Log, B256};
 use sp1_core::utils;
 use sp1_core::{SP1Prover, SP1Stdin, SP1Verifier};
-use url::Url;
+use std::str::FromStr;
 
 const ELF: &[u8] = include_bytes!("../../program/elf/riscv32im-succinct-zkvm-elf");
 
 #[tokio::main]
 async fn main() {
-    let block_number = 19344302;
-    let rpc_url = "https://docs-demo.quiknode.pro/";
+    // Generate a proof that a block with the provided block_hash has a particular log at the
+    // provided log_index.
+    let block_hash = "0x72a5d38fcb067e4432ec19be69fc15102d61008e0502558f6dacbe2dcdfd1f55";
     let log_index = 0u64;
 
-    // Generate proof.
+    // To prove this computation, we need certain witnesses such as the full block header
+    // and all the transaction receipts in block (these will be "private inputs" to our program).
+    // The "block_hash" and "log_index" will be "public inputs" to our program and be provided onchain.
+    // Our "program" will first verify that the witnessed block header matches the block hash.
+    // Then, it will verify that the witnessed receipts match the receipt root in the block header.
+    // This ensures that the provided block_receipts to the program are indeed the block_receipts
+    // corresponding to the block_hash public input. Then, the program will return the log at
+    // the provided log_index, which is also a public input to the program.
+    let (block_header, block_receipts) = util::get_witness_inputs(block_hash).await;
+
+    utils::setup_logger(); // Setup logger for SP1.
     let mut stdin = SP1Stdin::new();
-    // Initialize the provider.
-    let http = Http::new(Url::parse(&rpc_url).expect("invalid rpc url"));
-    let provider: HttpProvider = HttpProvider::new(http);
 
-    println!("Fetching block");
-    // Get the block.
-    let block = provider
-        .get_block_by_number((block_number).into(), false)
-        .await
-        .expect("getting block failed")
-        .expect("block not found");
-    let header = block.header;
-    println!("Got block, fetching block receipts");
-    let transaction_receipts = provider
-        .get_block_receipts((block_number).into())
-        .await
-        .expect("getting block receipts failed")
-        .expect("block receipts not found");
-    println!("Got transaction receipts");
-    let receipts = transaction_receipts
-        .iter()
-        .map(|receipt| {
-            let mut reth_logs = vec![];
-            for log in receipt.logs.iter() {
-                reth_logs.push(Log {
-                    address: log.address,
-                    topics: log.topics.clone(),
-                    data: log.data.clone(),
-                })
-            }
-            let success = receipt.status_code.unwrap().eq(&U64::ZERO);
-            let tx_type: u8 = receipt.transaction_type.try_into().unwrap();
-            Receipt {
-                tx_type: TxType::try_from(tx_type).unwrap(),
-                success,
-                cumulative_gas_used: receipt.cumulative_gas_used.try_into().unwrap(),
-                logs: reth_logs,
-            }
-        })
-        .collect::<Vec<_>>();
-    println!("Got receipts, generating proof");
-
-    let reth_header = header.clone().into_reth();
-    let block_hash = reth_header.hash_slow();
-    assert_eq!(block_hash, header.hash.unwrap(), "block hash mismatch");
-
-    utils::setup_logger();
-
-    stdin.write(&block_hash);
-    stdin.write(&log_index);
-    stdin.write(&reth_header);
-    stdin.write(&receipts);
+    stdin.write(&B256::from_str(block_hash).unwrap()); // Write the block hash as a public input.
+    stdin.write(&log_index); // Write the target log index as a public input.
+    stdin.write(&block_header); // Write the full block header as a private input (witness data).
+    stdin.write(&block_receipts); // Write all block receipts as a private input (witness data).
 
     let mut proof = SP1Prover::prove(ELF, stdin).expect("proving failed");
 
-    // Read output.
+    // Read the log at the provided index as an output (public).
     let log_at_index = proof.stdout.read::<Log>();
     println!("log at index: {:?}", log_at_index);
 
     // Verify proof.
     SP1Verifier::verify(ELF, &proof).expect("verification failed");
+
+    // To verify this proof onchain, your Solidity code might look something like this:
+    // function xchainLog(bytes memory proof, bytes32 blockhash, uint64 logIndex, Log log_at_index) public {
+    //     bytes memory input = abi.encode(blockHash, logIndex);
+    //     bytes memory output = abi.encode(log_at_index);
+    //     ISP1Verifier.verifyProof(proof, input, output); // will revert if proof doesn't verify
+    //     // TODO: use the log_at_index for rest of logic...
+    // }
 
     // Save proof.
     proof
@@ -88,35 +56,4 @@ async fn main() {
         .expect("saving proof failed");
 
     println!("succesfully generated and verified proof for the program!")
-}
-
-pub trait IntoReth<T> {
-    fn into_reth(self) -> T;
-}
-
-impl IntoReth<RethHeader> for AlloyHeader {
-    fn into_reth(self) -> RethHeader {
-        RethHeader {
-            parent_hash: self.parent_hash.0.into(),
-            ommers_hash: self.uncles_hash.0.into(),
-            beneficiary: self.miner.0.into(),
-            state_root: self.state_root.0.into(),
-            transactions_root: self.transactions_root.0.into(),
-            receipts_root: self.receipts_root.0.into(),
-            withdrawals_root: self.withdrawals_root,
-            logs_bloom: self.logs_bloom.0.into(),
-            difficulty: self.difficulty,
-            number: self.number.unwrap().try_into().unwrap(),
-            gas_limit: self.gas_limit.try_into().unwrap(),
-            gas_used: self.gas_used.try_into().unwrap(),
-            timestamp: self.timestamp.try_into().unwrap(),
-            extra_data: self.extra_data.0.into(),
-            mix_hash: self.mix_hash.unwrap(),
-            nonce: u64::from_be_bytes(self.nonce.unwrap().0),
-            base_fee_per_gas: Some(self.base_fee_per_gas.unwrap().try_into().unwrap()),
-            blob_gas_used: self.blob_gas_used.map(|x| x.try_into().unwrap()),
-            excess_blob_gas: self.excess_blob_gas.map(|x| x.try_into().unwrap()),
-            parent_beacon_block_root: self.parent_beacon_block_root,
-        }
-    }
 }
