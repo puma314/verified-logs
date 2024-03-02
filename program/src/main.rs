@@ -46,6 +46,7 @@ pub fn main() {
     let receipts_root = ordered_trie_root_with_encoder(&receipts_with_bloom, |receipt, buf| {
         receipt.encode_inner(buf, false);
     });
+    // TODO: comment in the below assertions once receipt root computation is correct.
     // assert_eq!(receipts_root, header.receipts_root);
     // println!("verified that receipts root matches header");
     println!("cycle-tracker-end: compute-receipt-root");
