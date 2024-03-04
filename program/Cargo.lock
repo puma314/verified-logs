@@ -834,15 +834,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fibonacci-program"
-version = "0.1.0"
-dependencies = [
- "alloy-rpc-types 0.1.0 (git+https://github.com/alloy-rs/alloy)",
- "reth-primitives",
- "sp1-zkvm",
-]
-
-[[package]]
 name = "fixed-hash"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1177,6 +1168,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "mpt-log-verifier-client"
+version = "0.1.0"
+dependencies = [
+ "alloy-rlp",
+ "alloy-rpc-types 0.1.0 (git+https://github.com/alloy-rs/alloy)",
+ "reth-primitives",
+ "sp1-zkvm",
 ]
 
 [[package]]

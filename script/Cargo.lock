@@ -1407,22 +1407,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e825f6987101665dea6ec934c09ec6d721de7bc1bf92248e1d5810c8cd636b77"
 
 [[package]]
-name = "fibonacci-script"
-version = "0.1.0"
-dependencies = [
- "alloy-providers",
- "alloy-rpc-types 0.1.0 (git+https://github.com/alloy-rs/alloy)",
- "alloy-transport-http",
- "ethers-core",
- "ethers-providers",
- "reth-primitives",
- "sp1-core",
- "sp1-helper",
- "tokio",
- "url",
-]
-
-[[package]]
 name = "fixed-hash"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2100,6 +2084,23 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "mpt-log-verifier-host"
+version = "0.1.0"
+dependencies = [
+ "alloy-providers",
+ "alloy-rlp",
+ "alloy-rpc-types 0.1.0 (git+https://github.com/alloy-rs/alloy)",
+ "alloy-transport-http",
+ "ethers-core",
+ "ethers-providers",
+ "reth-primitives",
+ "sp1-core",
+ "sp1-helper",
+ "tokio",
+ "url",
 ]
 
 [[package]]

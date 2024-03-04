@@ -1,7 +1,7 @@
 [workspace]
 [package]
 version = "0.1.0"
-name = "fibonacci-script"
+name = "mpt-log-verifier-host"
 edition = "2021"
 
 [dependencies]
@@ -13,6 +13,7 @@ tokio = { version = "1.36.0", features = ["full"] }
 alloy-providers = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0" }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0" }
 alloy-transport-http = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0" }
+alloy-rlp = { version = "0.3.4", features = ["derive"] }
 reth-primitives = { git = "https://github.com/sp1-patches/reth", default-features = false, branch = "sp1-reth" }
 
 [build-dependencies]
