@@ -1,13 +1,15 @@
 [workspace]
+
 [package]
 version = "0.1.0"
-name = "fibonacci-program"
+name = "mpt-log-verifier-client"
 edition = "2021"
 
 [dependencies]
 sp1-zkvm = { git = "https://github.com/succinctlabs/sp1.git" }
 reth-primitives = { git = "https://github.com/sp1-patches/reth", default-features = false, branch = "sp1-reth" }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0" }
+alloy-rlp = "0.3.4"
 
 [patch.crates-io]
 tiny-keccak = { git = "https://github.com/sp1-patches/tiny-keccak", branch = "patch-v2.0.2" }

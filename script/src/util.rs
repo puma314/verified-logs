@@ -74,7 +74,7 @@ pub async fn get_witness_inputs(block_hash: &str) -> (RethHeader, Vec<Receipt>) 
                     data: log.data.clone(),
                 })
             }
-            let success = receipt.status_code.unwrap().eq(&U64::ZERO);
+            let success = receipt.status_code.unwrap() == U64::from(1);
             let tx_type: u8 = receipt.transaction_type.try_into().unwrap();
             Receipt {
                 tx_type: TxType::try_from(tx_type).unwrap(),
